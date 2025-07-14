@@ -1,4 +1,4 @@
-# 🚀 Task Manager API
+# Atom Challenge - Task Manager - API
 
 [![Node.js](https://img.shields.io/badge/Node.js-22-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
