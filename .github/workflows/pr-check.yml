@@ -1,0 +1,44 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  validate:
+    name: Validar PR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+          
+      - name: Instalar dependencias
+        working-directory: ./functions
+        run: npm ci
+        
+      - name: Ejecutar linting
+        working-directory: ./functions
+        run: npm run lint
+        
+      - name: Ejecutar tests
+        working-directory: ./functions
+        run: npm run test
+        
+      - name: Build del proyecto
+        working-directory: ./functions
+        run: npm run build
+        
+      - name: Verificar tipos TypeScript
+        working-directory: ./functions
+        run: npx tsc --noEmit 

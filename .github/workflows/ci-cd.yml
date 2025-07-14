@@ -1,0 +1,113 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '22'
+  FIREBASE_PROJECT_ID: demoangular-17892
+
+jobs:
+  validate:
+    name: Validar Código
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+          
+      - name: Instalar dependencias
+        working-directory: ./functions
+        run: npm ci
+        
+      - name: Ejecutar linting
+        working-directory: ./functions
+        run: npm run lint
+        
+      - name: Ejecutar tests con coverage
+        working-directory: ./functions
+        run: npm run test:coverage
+        
+      - name: Build del proyecto
+        working-directory: ./functions
+        run: npm run build
+        
+      - name: Verificar tipos TypeScript
+        working-directory: ./functions
+        run: npx tsc --noEmit
+
+  deploy-staging:
+    name: Deploy a Staging
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+          
+      - name: Instalar dependencias
+        working-directory: ./functions
+        run: npm ci
+        
+      - name: Build del proyecto
+        working-directory: ./functions
+        run: npm run build
+        
+      - name: Deploy a Firebase Staging
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions,firestore:rules,firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          GCP_SA_KEY : ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
+
+  deploy-production:
+    name: Deploy a Production
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+          
+      - name: Instalar dependencias
+        working-directory: ./functions
+        run: npm ci
+        
+      - name: Build del proyecto
+        working-directory: ./functions
+        run: npm run build
+        
+      - name: Deploy a Firebase Production
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions,firestore:rules,firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          GCP_SA_KEY : ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }} 
